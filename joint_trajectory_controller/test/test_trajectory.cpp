@@ -1036,10 +1036,11 @@ TEST(TestTrajectoryInterpolation, LinearInterpolationBetweenTwoPoints)
   // At 0.5s -> pos = 5
   EXPECT_NEAR(output.positions[0], 5.0, 1e-9);
 
-  // Velocities and accelerations should be cleared by LINEAR behavior
+  // Velocities should be constant by LINEAR behavior
   EXPECT_EQ(output.velocities.size(), 1u);
-  EXPECT_NEAR(output.velocities[0], 0.0, 1e-9);
+  EXPECT_NEAR(output.velocities[0], 10.0, 1e-9);
 
+  // Accelerations should be cleared by LINEAR behavior
   EXPECT_EQ(output.accelerations.size(), 1u);
   EXPECT_NEAR(output.accelerations[0], 0.0, 1e-9);
 }
