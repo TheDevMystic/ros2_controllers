@@ -15,6 +15,7 @@
 #include "joint_trajectory_controller/trajectory.hpp"
 
 #include <memory>
+#include <stdexcept>
 
 #include "angles/angles.h"
 #include "hardware_interface/macros.hpp"
@@ -50,6 +51,12 @@ void Trajectory::set_point_before_trajectory_msg(
   time_before_traj_msg_ = current_time;
   state_before_traj_msg_ = current_point;
 
+  // Check for nullptr and points vector emptiness
+  if (!trajectory_msg_ || trajectory_msg_->points.empty())
+  {
+    throw std::runtime_error("Trajectory message pointer is null or has no points in set_point_before_trajectory_msg()");
+  }
+
   // Compute offsets due to wrapping joints
   wraparound_joint(
     state_before_traj_msg_.positions, trajectory_msg_->points[0].positions,
@@ -64,6 +71,11 @@ void wraparound_joint(
   // joints_angle_wraparound is even empty, or has the same size as the number of joints
   for (size_t i = 0; i < joints_angle_wraparound.size(); i++)
   {
+    // Check bounds
+    if (i >= current_position.size() || i >= next_position.size()) {
+      throw std::runtime_error("wraparound_joint: index out of bounds for positions");
+    }
+
     if (joints_angle_wraparound[i])
     {
       dist = angles::shortest_angular_distance(current_position[i], next_position[i]);
@@ -125,6 +137,12 @@ bool Trajectory::sample(
   const rclcpp::Time first_point_timestamp =
     trajectory_start_time_ + first_point_in_msg.time_from_start;
 
+  // Check for vector sizes
+  if (state_before_traj_msg_.positions.size() != first_point_in_msg.positions.size())
+  {
+    throw std::runtime_error("Mismatched position vector sizes before deduce_from_derivatives in sample().");
+  }
+
   // current time hasn't reached traj time of the first point in the msg yet
   if (sample_time < first_point_timestamp)
   {
@@ -185,7 +203,7 @@ bool Trajectory::sample(
         output_state = next_point;
       }
       // If linear interpolation
-      if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR)
+      else if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR)
       {
         auto p0 = point;
         auto p1 = next_point;
@@ -395,25 +413,25 @@ void Trajectory::deduce_from_derivatives(
   trajectory_msgs::msg::JointTrajectoryPoint & first_state,
   trajectory_msgs::msg::JointTrajectoryPoint & second_state, const size_t dim, const double delta_t)
 {
-  if (first_state.effort.empty())
+  if (first_state.effort.size() != dim)
   {
     first_state.effort.assign(dim, 0.0);
   }
-  if (second_state.effort.empty())
+  if (second_state.effort.size() != dim)
   {
     second_state.effort.assign(dim, 0.0);
   }
-  if (second_state.positions.empty())
+  if (second_state.positions.size() != dim)
   {
     second_state.positions.resize(dim);
-    if (first_state.velocities.empty())
+    if (first_state.velocities.size() != dim)
     {
       first_state.velocities.resize(dim, 0.0);
     }
-    if (second_state.velocities.empty())
+    if (second_state.velocities.size() != dim)
     {
       second_state.velocities.resize(dim);
-      if (first_state.accelerations.empty())
+      if (first_state.accelerations.size() != dim)
       {
         first_state.accelerations.resize(dim, 0.0);
       }
