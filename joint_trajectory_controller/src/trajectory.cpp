@@ -187,8 +187,8 @@ bool Trajectory::sample(
       // If linear interpolation
       if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR)
       {
-        auto p1 = point;
-        auto p2 = next_point;
+        auto p0 = point;
+        auto p1 = next_point;
 
         // Force clear velocity and acceleration for linear interpolation.
         p0.velocities.clear(); p0.accelerations.clear();
@@ -198,11 +198,11 @@ bool Trajectory::sample(
       }
       else
       {
-        auto p1 = point;
-        auto p2 = next_point;
+        auto p0 = point;
+        auto p1 = next_point;
 
         // it changes points only if position and velocity do not exist, but their derivatives
-        deduce_from_derivatives(p1, p2, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
+        deduce_from_derivatives(p0, p1, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
 
         interpolate_between_points(t0, p0, t1, p1, sample_time, output_state);
       }
