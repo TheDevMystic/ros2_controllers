@@ -133,15 +133,27 @@ bool Trajectory::sample(
     {
       output_state = state_before_traj_msg_;
     }
+    else if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR)
+    {
+      auto p0 = state_before_traj_msg_;
+      auto p1 = first_point_in_msg;
+      p0.velocities.clear(); p0.accelerations.clear();
+      p1.velocities.clear(); p1.accelerations.clear();
+      interpolate_between_points(
+        time_before_traj_msg_, p0, first_point_timestamp, p1,
+        sample_time, output_state);
+    }
     else
     {
+      auto p0 = state_before_traj_msg_;
+      auto p1 = first_point_in_msg;
       // it changes points only if position and velocity do not exist, but their derivatives
       deduce_from_derivatives(
-        state_before_traj_msg_, first_point_in_msg, state_before_traj_msg_.positions.size(),
+        p0, p1, p0.positions.size(),
         (first_point_timestamp - time_before_traj_msg_).seconds());
 
       interpolate_between_points(
-        time_before_traj_msg_, state_before_traj_msg_, first_point_timestamp, first_point_in_msg,
+        time_before_traj_msg_, p0, first_point_timestamp, p1,
         sample_time, output_state);
     }
     start_segment_itr = begin();  // no segments before the first
@@ -169,14 +181,17 @@ bool Trajectory::sample(
       // Do interpolation
       else
       {
-        if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR) {
+        // it changes points only if position and velocity do not exist, but their derivatives
+        deduce_from_derivatives(
+          point, next_point, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
+
+        if (interpolation_method_ == interpolation_methods::InterpolationMethod::LINEAR) {
           auto p0 = point;
           auto p1 = next_point;
           p0.velocities.clear(); p0.accelerations.clear();
           p1.velocities.clear(); p1.accelerations.clear();
           interpolate_between_points(t0, p0, t1, p1, sample_time, output_state);
         } else {
-          deduce_from_derivatives(point, next_point, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
           interpolate_between_points(t0, point, t1, next_point, sample_time, output_state);
         }
       }
