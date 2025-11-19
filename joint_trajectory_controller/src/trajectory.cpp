@@ -137,12 +137,6 @@ bool Trajectory::sample(
   const rclcpp::Time first_point_timestamp =
     trajectory_start_time_ + first_point_in_msg.time_from_start;
 
-  // Check for vector sizes
-  if (state_before_traj_msg_.positions.size() != first_point_in_msg.positions.size())
-  {
-    throw std::runtime_error("Mismatched position vector sizes before deduce_from_derivatives in sample().");
-  }
-
   // current time hasn't reached traj time of the first point in the msg yet
   if (sample_time < first_point_timestamp)
   {
