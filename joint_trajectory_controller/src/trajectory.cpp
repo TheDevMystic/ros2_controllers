@@ -169,10 +169,6 @@ bool Trajectory::sample(
       // Do interpolation
       else
       {
-        // it changes points only if position and velocity do not exist, but their derivatives
-        deduce_from_derivatives(
-          point, next_point, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
-
         if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR) {
           auto p0 = point;
           auto p1 = next_point;
@@ -180,6 +176,7 @@ bool Trajectory::sample(
           p1.velocities.clear(); p1.accelerations.clear();
           interpolate_between_points(t0, p0, t1, p1, sample_time, output_state);
         } else {
+          deduce_from_derivatives(point, next_point, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
           interpolate_between_points(t0, point, t1, next_point, sample_time, output_state);
         }
       }
