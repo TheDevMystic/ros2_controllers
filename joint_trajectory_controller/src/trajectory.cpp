@@ -173,7 +173,15 @@ bool Trajectory::sample(
         deduce_from_derivatives(
           point, next_point, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
 
-        interpolate_between_points(t0, point, t1, next_point, sample_time, output_state);
+        if (interpolation_methods == interpolation_methods::InterpolationMethod::LINEAR) {
+          auto p0 = point;
+          auto p1 = next_point;
+          p0.velocities.clear(); p0.accelerations.clear();
+          p1.velocities.clear(); p1.accelerations.clear();
+          interpolate_between_points(t0, p0, t1, p1, sample_time, output_state);
+        } else {
+          interpolate_between_points(t0, point, t1, next_point, sample_time, output_state);
+        }
       }
       start_segment_itr = begin() + static_cast<TrajectoryPointConstIter::difference_type>(i);
       end_segment_itr = begin() + static_cast<TrajectoryPointConstIter::difference_type>(i + 1);

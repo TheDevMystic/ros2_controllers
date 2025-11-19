@@ -22,31 +22,51 @@
 
 namespace joint_trajectory_controller
 {
+
 static const rclcpp::Logger LOGGER =
   rclcpp::get_logger("joint_trajectory_controller.interpolation_methods");
 
 namespace interpolation_methods
 {
+
+/**
+ * @brief Enum class for interpolation methods.
+ * Enum class to define multiple interpolation methods between two points.
+ */
 enum class InterpolationMethod
 {
-  NONE,
-  VARIABLE_DEGREE_SPLINE
+  NONE,  ///< No interpolation; each point is executed exactly as provided.
+  LINEAR,  ///< Straight-line interpolation with constant velocity and zero acceleration.
+  VARIABLE_DEGREE_SPLINE  ///< Smooth spline interpolation with continuous velocities and accelerations.
 };
 
+/// Default interpolation method used when no parameter is specified.
 const InterpolationMethod DEFAULT_INTERPOLATION = InterpolationMethod::VARIABLE_DEGREE_SPLINE;
 
-const std::unordered_map<InterpolationMethod, std::string> InterpolationMethodMap(
-  {{InterpolationMethod::NONE, "none"}, {InterpolationMethod::VARIABLE_DEGREE_SPLINE, "splines"}});
+/// Maps interpolation method enums to their corresponding parameter strings.
+const std::unordered_map<InterpolationMethod, std::string> InterpolationMethodMap({
+  {InterpolationMethod::NONE, "none"}, 
+  {InterpolationMethod::LINEAR, "linear"},
+  {InterpolationMethod::VARIABLE_DEGREE_SPLINE, "splines"}
+});
 
+
+/**
+ * @brief Converts a string into the corresponding interpolation method.
+ * @returns Corresponding InterpolationMethod.
+ * @note When no parameter is matched (i.e., unknown parameter) defaults to VARIABLE_DEGREE_SPLINE.
+ */
 [[nodiscard]] inline InterpolationMethod from_string(const std::string & interpolation_method)
 {
-  if (interpolation_method.compare(InterpolationMethodMap.at(InterpolationMethod::NONE)) == 0)
+  if (interpolation_method == InterpolationMethodMap.at(InterpolationMethod::NONE))
   {
     return InterpolationMethod::NONE;
   }
-  else if (
-    interpolation_method.compare(
-      InterpolationMethodMap.at(InterpolationMethod::VARIABLE_DEGREE_SPLINE)) == 0)
+  else if (interpolation_method == InterpolationMethodMap.at(InterpolationMethod::LINEAR))
+  {
+    return InterpolationMethod::LINEAR;
+  }
+  else if (interpolation_method == InterpolationMethodMap.at(InterpolationMethod::VARIABLE_DEGREE_SPLINE))
   {
     return InterpolationMethod::VARIABLE_DEGREE_SPLINE;
   }
@@ -55,7 +75,7 @@ const std::unordered_map<InterpolationMethod, std::string> InterpolationMethodMa
   {
     RCLCPP_INFO(
       LOGGER,
-      "No interpolation method parameter was given. Using the default, VARIABLE_DEGREE_SPLINE.");
+      "Unknown interpolation method was given. Using default: VARIABLE_DEGREE_SPLINE.");
     return InterpolationMethod::VARIABLE_DEGREE_SPLINE;
   }
 }

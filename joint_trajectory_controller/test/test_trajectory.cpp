@@ -988,4 +988,59 @@ TEST(TestWrapAroundJoint, wraparound_all_joints_no_offset)
   EXPECT_EQ(current_position[0], next_position[0]);
   EXPECT_EQ(current_position[1], next_position[1]);
   EXPECT_EQ(current_position[2], next_position[2]);
+
+
+TEST_F(TrajectoryInterpolationTest, LinearInterpolationBetweenTwoPoints)
+{
+  using joint_trajectory_controller::interpolation_methods::InterpolationMethod;
+
+  auto traj_msg = std::make_shared<trajectory_msgs::msg::JointTrajectory>();
+  traj_msg->header.stamp = rclcpp::Time(0, 0);
+
+  // Two-point trajectory
+  trajectory_msgs::msg::JointTrajectoryPoint p0;
+  p0.positions = {0.0};
+  p0.velocities = {0.0};
+  p0.accelerations = {0.0};
+  p0.time_from_start = rclcpp::Duration(0, 0);
+
+  trajectory_msgs::msg::JointTrajectoryPoint p1;
+  p1.positions = {10.0};
+  p1.velocities = {0.0};
+  p1.accelerations = {0.0};
+  p1.time_from_start = rclcpp::Duration(1, 0);
+
+  traj_msg->points.push_back(p0);
+  traj_msg->points.push_back(p1);
+
+  joint_trajectory_controller::Trajectory traj(traj_msg);
+
+  // Sample halfway between p0 and p1
+  rclcpp::Time sample_time(0, 500000000);  // 0.5s
+  trajectory_msgs::msg::JointTrajectoryPoint output;
+  joint_trajectory_controller::TrajectoryPointConstIter start_it, end_it;
+
+  bool valid = traj.sample(
+    sample_time,
+    InterpolationMethod::LINEAR,
+    output,
+    start_it,
+    end_it,
+    true);
+
+  ASSERT_TRUE(valid);
+
+  // Expected linear interpolation:
+  // At 0.0s -> pos = 0
+  // At 1.0s -> pos = 10
+  // At 0.5s -> pos = 5
+  EXPECT_NEAR(output.positions[0], 5.0, 1e-9);
+
+  // Velocities and accelerations should be cleared by LINEAR behavior
+  EXPECT_EQ(output.velocities.size(), 1u);
+  EXPECT_NEAR(output.velocities[0], 0.0, 1e-9);
+
+  EXPECT_EQ(output.accelerations.size(), 1u);
+  EXPECT_NEAR(output.accelerations[0], 0.0, 1e-9);
 }
+
