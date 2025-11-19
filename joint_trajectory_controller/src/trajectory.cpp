@@ -185,7 +185,7 @@ bool Trajectory::sample(
         deduce_from_derivatives(
           point, next_point, state_before_traj_msg_.positions.size(), (t1 - t0).seconds());
 
-        if (interpolation_method_ == interpolation_methods::InterpolationMethod::LINEAR) {
+        if (interpolation_method == interpolation_methods::InterpolationMethod::LINEAR) {
           auto p0 = point;
           auto p1 = next_point;
           p0.velocities.clear(); p0.accelerations.clear();
