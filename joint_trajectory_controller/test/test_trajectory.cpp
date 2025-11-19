@@ -988,9 +988,9 @@ TEST(TestWrapAroundJoint, wraparound_all_joints_no_offset)
   EXPECT_EQ(current_position[0], next_position[0]);
   EXPECT_EQ(current_position[1], next_position[1]);
   EXPECT_EQ(current_position[2], next_position[2]);
+}
 
-
-TEST_F(TrajectoryInterpolationTest, LinearInterpolationBetweenTwoPoints)
+TEST(TestTrajectoryInterpolation, LinearInterpolationBetweenTwoPoints)
 {
   using joint_trajectory_controller::interpolation_methods::InterpolationMethod;
 
