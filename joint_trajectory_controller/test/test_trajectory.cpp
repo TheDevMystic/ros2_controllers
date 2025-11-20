@@ -992,56 +992,97 @@ TEST(TestWrapAroundJoint, wraparound_all_joints_no_offset)
 
 TEST(TestTrajectoryInterpolation, LinearInterpolationBetweenTwoPoints)
 {
+  // Explicitly use the desired interpolation method
   using joint_trajectory_controller::interpolation_methods::InterpolationMethod;
+  const double EPS = 1e-9;
 
   auto traj_msg = std::make_shared<trajectory_msgs::msg::JointTrajectory>();
-  traj_msg->header.stamp = rclcpp::Time(0, 0);
 
-  // Two-point trajectory
-  trajectory_msgs::msg::JointTrajectoryPoint p0;
-  p0.positions = {0.0};
-  p0.velocities = {0.0};
-  p0.accelerations = {0.0};
-  p0.time_from_start = rclcpp::Duration(0, 0);
+  // --- 1. Define Trajectory Points (p1 & p2) ---
 
+  // Point 1: 1.0 second from the trajectory start
   trajectory_msgs::msg::JointTrajectoryPoint p1;
   p1.positions = {10.0};
   p1.velocities = {0.0};
-  p1.accelerations = {0.0};
-  p1.time_from_start = rclcpp::Duration(1, 0);
-
-  traj_msg->points.push_back(p0);
+  p1.time_from_start = rclcpp::Duration::from_seconds(1.0);
   traj_msg->points.push_back(p1);
 
-  joint_trajectory_controller::Trajectory traj(traj_msg);
+  // Point 2: 2.0 seconds from the trajectory start
+  trajectory_msgs::msg::JointTrajectoryPoint p2;
+  p2.positions = {20.0};
+  p2.velocities = {0.0};
+  p2.time_from_start = rclcpp::Duration::from_seconds(2.0);
+  traj_msg->points.push_back(p2);
 
-  // Sample halfway between p0 and p1
-  rclcpp::Time sample_time(0, 500000000);  // 0.5s
+  // --- 2. Define Initial State (p0) ---
+  trajectory_msgs::msg::JointTrajectoryPoint point_before_msg;
+  point_before_msg.time_from_start = rclcpp::Duration::from_seconds(0.0);
+  point_before_msg.positions = {0.0};
+  point_before_msg.velocities = {0.0};
+
+  // Set current state (time_now corresponds to time 0.0s of the trajectory)
+  const rclcpp::Time time_now = rclcpp::Clock().now();
+  joint_trajectory_controller::Trajectory traj(time_now, point_before_msg, traj_msg);
+
   trajectory_msgs::msg::JointTrajectoryPoint output;
   joint_trajectory_controller::TrajectoryPointConstIter start_it, end_it;
 
-  bool valid = traj.sample(
-    sample_time,
-    InterpolationMethod::LINEAR,
-    output,
-    start_it,
-    end_it,
-    true);
+  // Expected velocity between (0.0s, 0.0) and (1.0s, 10.0)
+  // V = (10.0 - 0.0) / (1.0 - 0.0) = 10.0
+  double expected_velocity_seg1 = 10.0;
 
-  ASSERT_TRUE(valid);
+  // --- 3. Sample halfway through the first segment (at 0.5s) ---
+  {
+    rclcpp::Time sample_time = time_now + rclcpp::Duration::from_seconds(0.5);
 
-  // Expected linear interpolation:
-  // At 0.0s -> pos = 0
-  // At 1.0s -> pos = 10
-  // At 0.5s -> pos = 5
-  EXPECT_NEAR(output.positions[0], 5.0, 1e-9);
+    bool valid = traj.sample(
+      sample_time,
+      InterpolationMethod::LINEAR, // <-- Explicitly set to LINEAR
+      output,
+      start_it,
+      end_it);
 
-  // Velocities should be constant by LINEAR behavior
-  EXPECT_EQ(output.velocities.size(), 1u);
-  EXPECT_NEAR(output.velocities[0], 10.0, 1e-9);
+    ASSERT_TRUE(valid);
 
-  // Accelerations should be cleared by LINEAR behavior
-  EXPECT_EQ(output.accelerations.size(), 1u);
-  EXPECT_NEAR(output.accelerations[0], 0.0, 1e-9);
+    // Expected Position: 5.0
+    EXPECT_NEAR(output.positions[0], 5.0, EPS);
+
+    // Expected Velocity: Constant slope V = 10.0
+    EXPECT_EQ(output.velocities.size(), 1u);
+    EXPECT_NEAR(output.velocities[0], expected_velocity_seg1, EPS);
+
+    // Expected Acceleration: Zero for linear interpolation
+    EXPECT_EQ(output.accelerations.size(), 1u);
+    EXPECT_NEAR(output.accelerations[0], 0.0, EPS);
+  }
+
+  // --- 4. Sample exactly at the segment boundary (at 1.0s) ---
+  // The expected velocity here may vary, but standard behavior is to return the
+  // velocity of the preceding segment (10.0) or the succeeding segment (10.0).
+  // If the points had different velocities, the behavior would be implementation-specific.
+  {
+    rclcpp::Time sample_time = time_now + rclcpp::Duration::from_seconds(1.0);
+    
+    // Calculate expected velocity of the second segment:
+    // V = (20.0 - 10.0) / (2.0 - 1.0) = 10.0
+    double expected_velocity_seg2 = 10.0;
+
+    bool valid = traj.sample(
+      sample_time,
+      InterpolationMethod::LINEAR, // <-- Explicitly set to LINEAR
+      output,
+      start_it,
+      end_it);
+
+    ASSERT_TRUE(valid);
+    
+    // Expected Position: 10.0
+    EXPECT_NEAR(output.positions[0], p1.positions[0], EPS); 
+
+    // Expected Velocity: 10.0 (Since both segments have the same slope)
+    EXPECT_NEAR(output.velocities[0], expected_velocity_seg1, EPS); 
+
+    // Expected Acceleration: Zero
+    EXPECT_NEAR(output.accelerations[0], 0.0, EPS);
+  }
 }
-
