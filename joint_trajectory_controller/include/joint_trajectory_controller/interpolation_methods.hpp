@@ -65,12 +65,22 @@ const InterpolationMethod DEFAULT_INTERPOLATION = InterpolationMethod::VARIABLE_
 
 /**
  * \brief Maps `InterpolationMethod` enum values to their string identifiers.
- * This constant map is used to look up the string name for a given
- * InterpolationMethod (e.g., "splines" for `VARIABLE_DEGREE_SPLINE`).
+ * This constant map is used to look up the InterpolationMethod for a given
+ * string (e.g., "splines" for `VARIABLE_DEGREE_SPLINE`).
  */
 const std::unordered_map<std::string, InterpolationMethod> InterpolationMethodMap({
   {"none", InterpolationMethod::NONE},
   {"splines", InterpolationMethod::VARIABLE_DEGREE_SPLINE}
+});
+
+/**
+ * \brief Reverse map of InterpolationMethodMap.
+ * This constant map is used to look up the string name for a given
+ * InterpolationMethod (e.g., `VARIABLE_DEGREE_SPLINE` for "splines").
+ */
+const std::unordered_map<InterpolationMethod, std::string> ReverseInterpolationMethodMap({
+  {InterpolationMethod::NONE, "none"},
+  {InterpolationMethod::VARIABLE_DEGREE_SPLINE, "splines"}
 });
 
 /**
