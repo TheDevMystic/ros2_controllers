@@ -80,13 +80,12 @@ SegmentTolerances get_segment_tolerances(rclcpp::Logger & jtc_logger, const Para
   for (size_t i = 0; i < n_joints; ++i)
   {
     auto const joint = params.joints[i];
-    auto const & joint_constraints = constraints.joints_map.at(joint);
+    auto const & joint_constraints = constraints.MapJoints.at(joint);
 
     // Path/Trajectory Tolerances (state_tolerance)
     tolerances.state_tolerance[i].position = joint_constraints.trajectory.position;
     tolerances.state_tolerance[i].velocity = joint_constraints.trajectory.velocity;
     tolerances.state_tolerance[i].acceleration = joint_constraints.trajectory.acceleration;
-    tolerances.state_tolerance[i].effort = joint_constraints.trajectory.effort;
 
     // Goal Tolerances (goal_state_tolerance)
     tolerances.goal_state_tolerance[i].position = joint_constraints.goal.position;
@@ -98,20 +97,17 @@ SegmentTolerances get_segment_tolerances(rclcpp::Logger & jtc_logger, const Para
     );
 
     tolerances.goal_state_tolerance[i].acceleration = joint_constraints.goal.acceleration;
-    tolerances.goal_state_tolerance[i].effort       = joint_constraints.goal.effort;
 
     // Debug Logging
     RCLCPP_DEBUG(logger, "--- Tolerances for Joint: %s ---", joint.c_str());
-    RCLCPP_DEBUG(logger, "Path Pos/Vel/Acc/Eff: %f / %f / %f / %f",
+    RCLCPP_DEBUG(logger, "Path Pos/Vel/Acc: %f / %f / %f",
       tolerances.state_tolerance[i].position,
       tolerances.state_tolerance[i].velocity,
-      tolerances.state_tolerance[i].acceleration,
-      tolerances.state_tolerance[i].effort);
-    RCLCPP_DEBUG(logger, "Goal Pos/Vel/Acc/Eff: %f / %f / %f / %f",
+      tolerances.state_tolerance[i].acceleration);
+    RCLCPP_DEBUG(logger, "Goal Pos/Vel/Acc: %f / %f / %f",
       tolerances.goal_state_tolerance[i].position,
       tolerances.goal_state_tolerance[i].velocity,
-      tolerances.goal_state_tolerance[i].acceleration,
-      tolerances.goal_state_tolerance[i].effort);
+      tolerances.goal_state_tolerance[i].acceleration);
   }
 
   return tolerances;
@@ -135,13 +131,13 @@ SegmentTolerances get_segment_tolerances(
   // Process goal.path_tolerance (Execution Constraints)
   for (const auto & joint_tol : goal.path_tolerance)
   {
-    auto it = joint_to_id.find(joint_tol.joint_name);
+    auto it = joint_to_id.find(joint_tol.name);
     if (it == joint_to_id.end())
     {
       RCLCPP_ERROR(
         logger,
         "Path tolerance specified for unknown joint '%s'. Using default tolerances.",
-        joint_tol.joint_name.c_str());
+        joint_tol.name.c_str());
       return default_tolerances;
     }
     const size_t i = it->second;
@@ -162,18 +158,13 @@ SegmentTolerances get_segment_tolerances(
       interface = "acceleration";
       active_tolerances.state_tolerance[i].acceleration = resolve_tolerance_source(
         default_tolerances.state_tolerance[i].acceleration, joint_tol.acceleration);
-
-      // Effort
-      interface = "effort";
-      active_tolerances.state_tolerance[i].effort = resolve_tolerance_source(
-        default_tolerances.state_tolerance[i].effort, joint_tol.effort);
     }
     catch (const std::runtime_error & ex)
     {
       RCLCPP_ERROR(
         logger,
         "Illegal path tolerance value for joint '%s' and interface '%s': %s. Using default tolerances.",
-        joint_tol.joint_name.c_str(), interface.c_str(), ex.what());
+        joint_tol.name.c_str(), interface.c_str(), ex.what());
       return default_tolerances;
     }
   }
@@ -181,13 +172,13 @@ SegmentTolerances get_segment_tolerances(
   // Process goal.goal_tolerance (Endpoint Constraints)
   for (const auto & goal_tol : goal.goal_tolerance)
   {
-    auto it = joint_to_id.find(goal_tol.joint_name);
+    auto it = joint_to_id.find(goal_tol.name);
     if (it == joint_to_id.end())
     {
       RCLCPP_ERROR(
         logger,
         "Goal tolerance specified for unknown joint '%s'. Using default tolerances.",
-        goal_tol.joint_name.c_str());
+        goal_tol.name.c_str());
       return default_tolerances;
     }
     const size_t i = it->second;
@@ -208,18 +199,13 @@ SegmentTolerances get_segment_tolerances(
       interface = "acceleration";
       active_tolerances.goal_state_tolerance[i].acceleration = resolve_tolerance_source(
         default_tolerances.goal_state_tolerance[i].acceleration, goal_tol.acceleration);
-
-      // Effort
-      interface = "effort";
-      active_tolerances.goal_state_tolerance[i].effort = resolve_tolerance_source(
-        default_tolerances.goal_state_tolerance[i].effort, goal_tol.effort);
     }
     catch (const std::runtime_error & ex)
     {
       RCLCPP_ERROR(
         logger,
         "Illegal goal tolerance value for joint '%s' and interface '%s': %s. Using default tolerances.",
-        goal_tol.joint_name.c_str(), interface.c_str(), ex.what());
+        goal_tol.name.c_str(), interface.c_str(), ex.what());
       return default_tolerances;
     }
   }
