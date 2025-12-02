@@ -232,11 +232,6 @@ joint_trajectory_controller:
           default_value: 0.0,
           description: "Acceleration tolerance during trajectory execution."
         }
-        effort: {
-          type: double,
-          default_value: 0.0,
-          description: "Effort tolerance during trajectory execution."
-        }
       goal:
         position: {
           type: double,
@@ -253,9 +248,4 @@ joint_trajectory_controller:
           type: double,
           default_value: 0.0,
           description: "Acceleration tolerance for the final goal state."
-        }
-        effort: {
-          type: double,
-          default_value: 0.0,
-          description: "Effort tolerance for the final goal state."
         }
