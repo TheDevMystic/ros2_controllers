@@ -287,12 +287,12 @@ inline trajectory_msgs::msg::JointTrajectoryPoint create_error_trajectory_point(
   }
 
   // Effort Error (Only if both are available)
-  if (!desired_state.efforts.empty() && !current_state.efforts.empty())
+  if (!desired_state.effort.empty() && !current_state.effort.empty())
   {
-    error_state.efforts.resize(n_joints);
+    error_state.effort.resize(n_joints);
     std::transform(
-      desired_state.efforts.begin(), desired_state.efforts.end(),
-      current_state.efforts.begin(), error_state.efforts.begin(),
+      desired_state.effort.begin(), desired_state.effort.end(),
+      current_state.effort.begin(), error_state.effort.begin(),
       subtract);
   }
 
@@ -312,7 +312,7 @@ inline bool check_state_tolerance_per_joint(
   const double error_acceleration =
     state_error.accelerations.empty() ? 0.0 : state_error.accelerations[joint_idx];
   const double error_effort =
-    state_error.efforts.empty() ? 0.0 : state_error.efforts[joint_idx];
+    state_error.effort.empty() ? 0.0 : state_error.effort[joint_idx];
 
   // Check if the components are valid
   const bool is_valid =
