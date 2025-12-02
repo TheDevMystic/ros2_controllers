@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 /// \author Adolfo Rodriguez Tsouroukdissian
+/// \author Suryansh Singh (thedevmystic)
 
 #ifndef JOINT_TRAJECTORY_CONTROLLER__TOLERANCES_HPP_
 #define JOINT_TRAJECTORY_CONTROLLER__TOLERANCES_HPP_
@@ -195,6 +196,18 @@ SegmentTolerances get_segment_tolerances(
   const std::vector<std::string> & joints);
 
 /**
+ * \brief Calculates the error point (desired - actual) for a trajectory point.
+ *
+ * \param desired_state The commanded state point.
+ * \param current_state The actual state point from the hardware.
+ *
+ * \return A JointTrajectoryPoint where positions, velocities, etc., are the difference.
+ */
+trajectory_msgs::msg::JointTrajectoryPoint create_error_trajectory_point(
+  const trajectory_msgs::msg::JointTrajectoryPoint & desired_state,
+  const trajectory_msgs::msg::JointTrajectoryPoint & current_state);
+
+/**
  * \brief Checks if the error for a single joint state component is within the defined tolerance.
  *
  * This function is used to validate the state error (e.g., actual minus desired) for a
@@ -233,19 +246,155 @@ bool check_trajectory_point_tolerance(
   const std::vector<StateTolerances> & segment_tolerances,
   bool show_errors = false);
 
-/**
- * \brief Calculates the error point (desired - actual) for a trajectory point.
- *
- * \param desired_state The commanded state point.
- * \param current_state The actual state point from the hardware.
- *
- * \return A JointTrajectoryPoint where positions, velocities, etc., are the difference.
- */
-trajectory_msgs::msg::JointTrajectoryPoint create_error_trajectory_point(
-  const trajectory_msgs::msg::JointTrajectoryPoint & desired_state,
-  const trajectory_msgs::msg::JointTrajectoryPoint & current_state);
 
-/// TODO: ADD IMPLEMENTATION OF INLINE FUNCTIONS.
+/** Inline Functions Implementations **/
+
+inline trajectory_msgs::msg::JointTrajectoryPoint create_error_trajectory_point(
+  const trajectory_msgs::msg::JointTrajectoryPoint & desired_state,
+  const trajectory_msgs::msg::JointTrajectoryPoint & current_state)
+{
+  trajectory_msgs::msg::JointTrajectoryPoint error_state;
+  const size_t n_joints = desired_state.positions.size();
+
+  // Helper lambda for element-wise subtraction (desired - actual)
+  auto subtract = [](double desired, double actual) { return desired - actual; };
+
+  // Position Error
+  error_state.positions.resize(n_joints);
+  std::transform(
+    desired_state.positions.begin(), desired_state.positions.end(),
+    current_state.positions.begin(), error_state.positions.begin(),
+    subtract);
+
+  // Velocity Error (Only if both are available)
+  if (!desired_state.velocities.empty() && !current_state.velocities.empty())
+  {
+    error_state.velocities.resize(n_joints);
+    std::transform(
+      desired_state.velocities.begin(), desired_state.velocities.end(),
+      current_state.velocities.begin(), error_state.velocities.begin(),
+      subtract);
+  }
+
+  // Acceleration Error (Only if both are available)
+  if (!desired_state.accelerations.empty() && !current_state.accelerations.empty())
+  {
+    error_state.accelerations.resize(n_joints);
+    std::transform(
+      desired_state.accelerations.begin(), desired_state.accelerations.end(),
+      current_state.accelerations.begin(), error_state.accelerations.begin(),
+      subtract);
+  }
+
+  // Effort Error (Only if both are available)
+  if (!desired_state.efforts.empty() && !current_state.efforts.empty())
+  {
+    error_state.efforts.resize(n_joints);
+    std::transform(
+      desired_state.efforts.begin(), desired_state.efforts.end(),
+      current_state.efforts.begin(), error_state.efforts.begin(),
+      subtract);
+  }
+
+  return error_state;
+}
+
+inline bool check_state_tolerance_per_joint(
+  const trajectory_msgs::msg::JointTrajectoryPoint & state_error, size_t joint_idx,
+  const StateTolerances & state_tolerance, bool show_errors = false)
+{
+  using std::abs;
+
+  // Extract joint state components from state_error
+  const double error_position = state_error.positions[joint_idx];
+  const double error_velocity =
+    state_error.velocities.empty() ? 0.0 : state_error.velocities[joint_idx];
+  const double error_acceleration =
+    state_error.accelerations.empty() ? 0.0 : state_error.accelerations[joint_idx];
+  const double error_effort =
+    state_error.efforts.empty() ? 0.0 : state_error.efforts[joint_idx];
+
+  // Check if the components are valid
+  const bool is_valid =
+    !(state_tolerance.position > 0.0 && abs(error_position) > state_tolerance.position) &&
+    !(state_tolerance.velocity > 0.0 && abs(error_velocity) > state_tolerance.velocity) &&
+    !(state_tolerance.acceleration > 0.0 && abs(error_acceleration) > state_tolerance.acceleration) &&
+    !(state_tolerance.effort > 0.0 && abs(error_effort) > state_tolerance.effort);
+
+  // If valid, then return true
+  if (is_valid)
+  {
+    return true;
+  }
+
+  // Otherwise, if logging errors [NON REALTIME]
+  if (show_errors)
+  {
+    const auto logger = rclcpp::get_logger("tolerances");
+    RCLCPP_ERROR(logger, "State tolerances failed for joint %zu:", joint_idx);
+
+    if (state_tolerance.position > 0.0 && abs(error_position) > state_tolerance.position)
+    {
+      RCLCPP_ERROR(
+        logger, "Position Error: %f, Position Tolerance: %f", error_position,
+        state_tolerance.position);
+    }
+    if (state_tolerance.velocity > 0.0 && abs(error_velocity) > state_tolerance.velocity)
+    {
+      RCLCPP_ERROR(
+        logger, "Velocity Error: %f, Velocity Tolerance: %f", error_velocity,
+        state_tolerance.velocity);
+    }
+    if (
+      state_tolerance.acceleration > 0.0 && abs(error_acceleration) > state_tolerance.acceleration)
+    {
+      RCLCPP_ERROR(
+        logger, "Acceleration Error: %f, Acceleration Tolerance: %f", error_acceleration,
+        state_tolerance.acceleration);
+    }
+    if (state_tolerance.effort > 0.0 && abs(error_effort) > state_tolerance.effort)
+    {
+      RCLCPP_ERROR(
+        logger, "Effort Error: %f, Effort Tolerance: %f", error_effort,
+        state_tolerance.effort);
+    }
+  }
+
+  // Return false
+  return false;
+}
+
+inline bool check_trajectory_point_tolerance(
+  const trajectory_msgs::msg::JointTrajectoryPoint & state_error,
+  const std::vector<StateTolerances> & segment_tolerances,
+  bool show_errors = false)
+{
+  // Check that the error vector size matches the tolerance vector size
+  if (state_error.positions.size() != segment_tolerances.size())
+  {
+    if (show_errors)
+    {
+      const auto logger = rclcpp::get_logger("tolerances");
+      RCLCPP_ERROR(
+        logger, 
+        "Error point joint size (%zu) does not match tolerance joint size (%zu).",
+        state_error.positions.size(), segment_tolerances.size());
+    }
+    return false; // Cannot perform a valid check
+  }
+
+  for (size_t i = 0; i < segment_tolerances.size(); ++i)
+  {
+    // The check_state_tolerance_per_joint function handles checking for available
+    // interfaces (position, velocity, acceleration, effort) automatically.
+    if (!check_state_tolerance_per_joint(state_error, i, segment_tolerances[i], show_errors))
+    {
+      return false; // Found a joint that failed its tolerance
+    }
+  }
+
+  return true; // All joints passed the tolerance check
+}
 
 }  // namespace joint_trajectory_controller
 
