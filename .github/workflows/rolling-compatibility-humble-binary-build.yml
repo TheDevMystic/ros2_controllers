@@ -44,6 +44,10 @@ jobs:
           ROS_REPO: testing
           UPSTREAM_WORKSPACE: ros2_controllers.rolling.repos
 
+      - name: Debug - List contents of .work directory
+        if: always()
+        run: ls -R .work
+      
       - name: Locate and upload parameters header file
         # The 'if: always()' ensures this step runs even if the previous 'Run industrial_ci Build' step failed.
         if: always() 
