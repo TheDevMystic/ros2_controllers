@@ -221,7 +221,7 @@ joint_trajectory_controller:
         trajectory: {
           one_of<>: [
             { type: double },
-            { type: struct,
+            { type: struct
               fields:
                 position: {
                   type: double,
@@ -244,7 +244,7 @@ joint_trajectory_controller:
         goal: {
           one_of<>: [
             { type: double },
-            { type: struct,
+            { type: struct
               fields:
                 position: {
                   type: double,
