@@ -217,12 +217,12 @@ joint_trajectory_controller:
     }
     __map_joints:
       type: struct
-      fields: {
+      fields:
         trajectory: {
           one_of<>: [
             { type: double },
             { type: struct,
-              fields: {
+              fields:
                 position: {
                   type: double,
                   default_value: 0.0,
@@ -237,16 +237,15 @@ joint_trajectory_controller:
                   type: double,
                   default_value: 0.0,
                   description: "Acceleration tolerance for the trajectory execution."
-               }
-             }
-           }
-          ]
-        },
+                }
+              }
+            ]
+          },
         goal: {
           one_of<>: [
             { type: double },
             { type: struct,
-              fields: {
+              fields:
                 position: {
                   type: double,
                   default_value: 0.0,
@@ -261,9 +260,7 @@ joint_trajectory_controller:
                   type: double,
                   default_value: 0.0,
                   description: "Acceleration tolerance for the final goal state."
-               }
-             }
-           }
-          ]
-        }
-      }
+                }
+              }
+            ]
+          }
