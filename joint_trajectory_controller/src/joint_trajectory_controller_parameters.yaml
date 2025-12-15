@@ -217,7 +217,7 @@ joint_trajectory_controller:
     }
     __map_joints:
       type: struct
-      fields:
+      fields: {
         trajectory:
           one_of<>:
             - type: double
@@ -258,3 +258,4 @@ joint_trajectory_controller:
                   default_value: 0.0,
                   description: "Acceleration tolerance for the final goal state."
                }
+            }
